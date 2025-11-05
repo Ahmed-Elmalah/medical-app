@@ -9,6 +9,7 @@ class DoctorLoginPage extends StatelessWidget {
     "dr.mohamed@clinic.com",
     "dr.ahmed@clinic.com",
     "dr.zyad@clinic.com",
+    "dr.adham@clinic.com",
   ];
 
   @override

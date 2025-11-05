@@ -32,7 +32,6 @@ class PatientHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // مثال على كارت دكتور
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),

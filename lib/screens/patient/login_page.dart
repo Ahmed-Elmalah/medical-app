@@ -13,7 +13,7 @@ class PatientLoginPage extends StatelessWidget {
       "We're glad to see you again 💙",
     );
 
-    Future.delayed(Duration(seconds: 3), () {
+    Future.delayed(Duration(seconds: 2), () {
       Navigator.of(context).pop();
       Navigator.pushReplacement(
         context,
