@@ -1,7 +1,4 @@
-// ------------------------------------------------------
-// Hospital Model
-// ده الموديل اللي بيمسك بيانات المستشفى من الـ API
-// ------------------------------------------------------
+// 📁 lib/models/hospital_model.dart
 
 class HospitalModel {
   final int id;
@@ -16,13 +13,23 @@ class HospitalModel {
     required this.phone,
   });
 
-  // تحويل JSON → HospitalModel
+  // ✅ من JSON إلى موديل
   factory HospitalModel.fromJson(Map<String, dynamic> json) {
     return HospitalModel(
-      id: json["id"],
-      name: json["name"],
-      address: json["address"],
-      phone: json["phone"],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      address: json['address'] ?? '',
+      phone: json['phone'] ?? '',
     );
+  }
+
+  // ✅ من موديل إلى JSON (عشان تشتغل مع toJson في DoctorModel)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'address': address,
+      'phone': phone,
+    };
   }
 }
