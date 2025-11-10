@@ -1,4 +1,7 @@
-// models/doctor_model.dart
+// 📁 lib/models/doctor_model.dart
+// (النسخة اللي فيها workingDays)
+
+// (امسح أي 'import' لـ hospital أو specialization من هنا)
 
 class DoctorModel {
   final int id;
@@ -7,10 +10,10 @@ class DoctorModel {
   final HospitalModel? hospital;
   final SpecializationModel? specialization;
   final Map<String, dynamic>? workingHours;
-  final List<String>? workingDays;
+  final List<String>? workingDays; // (1) 🔥 تم تصليحها
   final String? imageUrl;
 
-  DoctorModel({
+  const DoctorModel({
     required this.id,
     required this.name,
     required this.email,
@@ -22,37 +25,47 @@ class DoctorModel {
   });
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
+    String? finalImgUrl;
+    if (json['img'] != null && json['img']['url'] != null) {
+      finalImgUrl = json['img']['url'];
+    }
+
     return DoctorModel(
-      id: json['id'],
-      name: json['name'] ?? '',
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'No Name',
       email: json['email'] ?? '',
-      hospital: json['hospital'] != null
-          ? HospitalModel.fromJson(json['hospital'])
-          : null,
-      specialization: json['specialization'] != null
-          ? SpecializationModel.fromJson(json['specialization'])
-          : null,
+      
       workingHours: json['workingHours'] != null
           ? Map<String, dynamic>.from(json['workingHours'])
           : null,
+      
+      // (2) 🔥 تم تصليحها من "workingKids"
       workingDays: json['workingDays'] != null
-          ? List<String>.from(json['workingDays'])
+          ? List<String>.from(json['workingDays']) 
           : [],
-      imageUrl: json['img'] != null
-          ? json['img']['url'] // هنا بيجيب لينك الصورة من الـ API
+
+      hospital: json['hospital'] != null
+          ? HospitalModel.fromJson(json['hospital'])
           : null,
+      
+      specialization: json['specialization'] != null
+          ? SpecializationModel.fromJson(json['specialization'])
+          : null,
+          
+      imageUrl: finalImgUrl,
     );
   }
 }
 
-// MODEL FOR hospital
+// --- (الكلاسات دي خليها في نفس الملف) ---
+
 class HospitalModel {
   final int id;
   final String name;
   final String address;
   final String phone;
 
-  HospitalModel({
+  const HospitalModel({
     required this.id,
     required this.name,
     required this.address,
@@ -61,28 +74,24 @@ class HospitalModel {
 
   factory HospitalModel.fromJson(Map<String, dynamic> json) {
     return HospitalModel(
-      id: json['id'],
-      name: json['name'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
       address: json['address'] ?? '',
       phone: json['phone'] ?? '',
     );
   }
 }
 
-// MODEL FOR specialization
 class SpecializationModel {
   final int id;
   final String name;
 
-  SpecializationModel({
-    required this.id,
-    required this.name,
-  });
+  const SpecializationModel({required this.id, required this.name});
 
   factory SpecializationModel.fromJson(Map<String, dynamic> json) {
     return SpecializationModel(
-      id: json['id'],
-      name: json['name'],
+      id: json['id'] ?? 0, 
+      name: json['name'] ?? ''
     );
   }
 }

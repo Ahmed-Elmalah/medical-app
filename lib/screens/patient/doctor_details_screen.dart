@@ -1,10 +1,22 @@
+// 📁 lib/screens/patient/doctor_details_screen.dart
+// (النسخة اللي فيها if mounted)
+
 import 'package:flutter/material.dart';
 import '../../models/doctor_model.dart';
+import '../../models/user_model.dart';
+import '../../services/booking_service.dart';
 
 class DoctorDetailsScreen extends StatefulWidget {
   final DoctorModel doctor;
+  final UserModel user;
+  final String jwt;
 
-  const DoctorDetailsScreen({super.key, required this.doctor});
+  const DoctorDetailsScreen({
+    super.key,
+    required this.doctor,
+    required this.user,
+    required this.jwt,
+  });
 
   @override
   State<DoctorDetailsScreen> createState() => _DoctorDetailsScreenState();
@@ -12,14 +24,68 @@ class DoctorDetailsScreen extends StatefulWidget {
 
 class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
     with SingleTickerProviderStateMixin {
+      
+  final BookingService _bookingService = BookingService();
   String? selectedDay;
+  bool _isLoading = false;
 
+  void _handleBooking() async {
+    if (selectedDay == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a day first"), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    
+    if (_isLoading) return;
+    setState(() => _isLoading = true); 
+
+    final fromTime = widget.doctor.workingHours?['from'] ?? "09:00"; 
+
+    final bool success = await _bookingService.createBooking(
+      doctorId: widget.doctor.id,
+      userId: widget.user.id,
+      selectedDay: selectedDay!,
+      fromTime: fromTime,
+      token: widget.jwt,
+    );
+
+    setState(() => _isLoading = false); 
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("✅ Booking successful! Day: $selectedDay at $fromTime"),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // --- (1) 🔥 التعديل هنا ---
+      // (لازم نتأكد إن الصفحة لسه موجودة)
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) { 
+          Navigator.pop(context); 
+        }
+      });
+      // -------------------------
+
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Failed to create booking. Please try again."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+  
+  // (دالة الـ build زي ما هي بالظبط متغيرتش)
   @override
   Widget build(BuildContext context) {
     final doctor = widget.doctor;
     final imageUrl = doctor.imageUrl != null
         ? "http://localhost:1337${doctor.imageUrl}"
-        : "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"; // صورة افتراضية
+        : "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"; 
 
     final workingDays = doctor.workingDays ?? [];
     final from = doctor.workingHours?['from'] ?? "غير محدد";
@@ -39,7 +105,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // الصورة
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.network(
@@ -56,8 +121,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 ),
               ),
               const SizedBox(height: 20),
-
-              // اسم الدكتور و التخصص
               Text(
                 doctor.name,
                 style: const TextStyle(
@@ -72,8 +135,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-
-              // المستشفى
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -89,8 +150,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 ],
               ),
               const SizedBox(height: 25),
-
-              // العنوان الفرعي للمواعيد
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
@@ -103,8 +162,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 ),
               ),
               const SizedBox(height: 10),
-
-              // قائمة الأيام (كروت منفصلة)
               Column(
                 children: workingDays.map((day) {
                   final isSelected = selectedDay == day;
@@ -137,8 +194,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                         GestureDetector(
                           onTap: () {
                             setState(() {
-                              selectedDay =
-                                  isSelected ? null : day; // التبديل بين الأيام
+                              selectedDay = isSelected ? null : day;
                             });
                           },
                           child: Row(
@@ -160,7 +216,6 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                             ],
                           ),
                         ),
-                        // ظهور الوقت والزرار بانيميشن ناعم
                         AnimatedSize(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -187,20 +242,17 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 40, vertical: 12),
                                       ),
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                "تم حجز موعد يوم $day بنجاح ✅"),
-                                          ),
-                                        );
-                                      },
+                                      onPressed: _handleBooking,
                                       icon: const Icon(Icons.calendar_month , color: Colors.white,),
-                                      label: const Text(
-                                        "احجز الآن",
-                                        style: TextStyle(fontSize: 18 , color: Colors.white),
-                                      ),
+                                      label: _isLoading
+                                          ? const CircularProgressIndicator(
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              strokeWidth: 2,
+                                            )
+                                          : const Text(
+                                              "احجز الآن",
+                                              style: TextStyle(fontSize: 18 , color: Colors.white),
+                                            ),
                                     ),
                                   ],
                                 )
