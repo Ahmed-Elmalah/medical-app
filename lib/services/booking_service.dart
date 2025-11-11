@@ -1,5 +1,5 @@
 // 📁 lib/services/booking_service.dart
-// (النسخة النهائية اللي فيها cancel صح)
+// (النسخة اللي بتبعت ID الميعاد و الـ state)
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -9,10 +9,12 @@ import '../models/booking_model.dart';
 class BookingService {
   static const String _baseUrl = "http://localhost:1337/api";
 
-  // (دالة الحجز بتاعتك سليمة 100%)
+  // --- (1) 🔥 التعديل هنا ---
   Future<bool> createBooking({
     required int doctorId,
     required int userId,
+    required int hospitalId,
+    required int scheduleId, // (ضفنا ده)
     required String selectedDay,
     required String fromTime,
     required String token,
@@ -31,6 +33,9 @@ class BookingService {
             'date': bookingDate.toIso8601String(),
             'doctor': doctorId,
             'user': userId,
+            'hospital': hospitalId,
+            'doctor_schedule': scheduleId, // (بعتنا ID الميعاد)
+            'state': 'Confirmed', // (بعتنا الحالة)
           },
         }),
       );
@@ -52,6 +57,49 @@ class BookingService {
     } catch (e) {
       print("Error creating booking: $e");
       return false;
+    }
+  }
+
+  // --- (1) 🔥 التعديل الصح هنا (بننفذ الخطة بتاعتك) ---
+  Future<List<BookingModel>> getBookingsForDoctor({
+    required int doctorId,
+    required String token,
+  }) async {
+    // (1. هنجيب "كل" الحجوزات زي ما إنت قولت)
+    final String url = "$_baseUrl/bookings?populate=*";
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        final List bookingsJson = body['data'];
+
+        // (2. هنحولهم كلهم لـ Models)
+        final List<BookingModel> allBookings = bookingsJson
+            .map((jsonItem) => BookingModel.fromJson(jsonItem))
+            .toList();
+
+        // (3. هنعمل "الفلترة" يدوي جوه فلاتر)
+        final List<BookingModel> doctorBookings = allBookings.where((booking) {
+          // (هنتأكد إن الحجز فيه دكتور، وإن الـ ID بتاعه هو اللي إحنا عايزينه)
+          return booking.doctor != null && booking.doctor!.id == doctorId;
+        }).toList();
+
+        return doctorBookings; // (هنرجع القايمة المتفلترة)
+      } else {
+        print("Failed to load doctor bookings: ${response.body}");
+        return [];
+      }
+    } catch (e) {
+      print("Error loading doctor bookings: $e");
+      return [];
     }
   }
 
@@ -153,6 +201,56 @@ class BookingService {
       return false;
     } catch (e) {
       print("Cancel error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> cancelBookingsBySchedule(int scheduleId, String token) async {
+    try {
+      // (أولاً: نجيب كل الحجوزات اللي على الميعاد ده)
+      final String getUrl =
+          "$_baseUrl/bookings?filters[doctor_schedule][id][\$eq]=$scheduleId";
+
+      final getResponse = await http.get(
+        Uri.parse(getUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (getResponse.statusCode != 200) {
+        print("Failed to get bookings for schedule: ${getResponse.body}");
+        return false; // (فشلنا نجيب الحجوزات)
+      }
+
+      final body = json.decode(getResponse.body);
+      final List bookingsJson = body['data'];
+
+      if (bookingsJson.isEmpty) {
+        return true; // (مفيش حجوزات نلغيها، يبقى نجحنا)
+      }
+
+      // (ثانياً: نلف عليهم واحد واحد ونغير حالته)
+      for (var booking in bookingsJson) {
+        final int bookingId = booking['id'];
+        final String updateUrl = "$_baseUrl/bookings/$bookingId";
+
+        await http.put(
+          Uri.parse(updateUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: json.encode({
+            'data': {
+              'state': 'Canceled_By_Doctor', // (بنغير الحالة)
+            },
+          }),
+        );
+        // (بنكمل اللفة حتى لو واحد فشل)
+      }
+
+      return true; // (خلصنا اللفة)
+    } catch (e) {
+      print("Error canceling bookings by schedule: $e");
       return false;
     }
   }

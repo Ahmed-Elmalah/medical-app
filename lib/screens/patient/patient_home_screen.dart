@@ -10,18 +10,18 @@ import '../../widgets/top_lists_section.dart';
 
 import '../../services/doctor_service.dart';
 import '../../services/hospital_service.dart';
-import '../../models/doctor_model.dart' hide HospitalModel;
+import '../../models/doctor_model.dart';
 import '../../models/hospital_model.dart';
 import '../../models/user_model.dart'; // (1) 🔥 استدعاء موديل اليوزر
 
 class PatientHomeScreen extends StatefulWidget {
   final UserModel user; // (2) 🔥 ضفنا اليوزر
-  final String jwt;    // (3) 🔥 ضفنا التوكن
+  final String jwt; // (3) 🔥 ضفنا التوكن
 
   const PatientHomeScreen({
-    Key? key, 
-    required this.user, 
-    required this.jwt // (4) 🔥 ضفناهم للـ constructor
+    Key? key,
+    required this.user,
+    required this.jwt, // (4) 🔥 ضفناهم للـ constructor
   }) : super(key: key);
 
   @override
@@ -58,11 +58,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     allHospitals = await HospitalService.getHospitals();
     setState(() {});
   }
+
   void _loadDoctors() async {
     allDoctors = await DoctorService.getDoctors();
     _prepareInitialDropdowns();
     setState(() {});
   }
+
   void _prepareInitialDropdowns() {
     filteredSpecializations = [
       "All Specializations",
@@ -73,6 +75,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     ];
     filteredDoctorsDropdown = ["All Doctors", ...allDoctors.map((d) => d.name)];
   }
+
   void _filterDoctors() {
     setState(() {
       filteredDoctors = allDoctors.where((doc) {
@@ -81,8 +84,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             : doc.hospital?.name == selectedHospital;
         final matchesSpecialization =
             selectedSpecialization == "All Specializations"
-                ? true
-                : doc.specialization?.name == selectedSpecialization;
+            ? true
+            : doc.specialization?.name == selectedSpecialization;
         final matchesDoctor = selectedDoctor == "All Doctors"
             ? true
             : doc.name == selectedDoctor;
@@ -90,6 +93,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       }).toList();
     });
   }
+
   void _updateSpecializationsByHospital(String hospitalName) {
     if (hospitalName == "All Hospitals") {
       filteredSpecializations = [
@@ -112,6 +116,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     selectedSpecialization = "All Specializations";
     _updateDoctorsDropdown();
   }
+
   void _updateDoctorsDropdown() {
     filteredDoctorsDropdown = allDoctors
         .where((d) {
@@ -120,8 +125,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               : d.hospital?.name == selectedHospital;
           final matchesSpecialization =
               selectedSpecialization == "All Specializations"
-                  ? true
-                  : d.specialization?.name == selectedSpecialization;
+              ? true
+              : d.specialization?.name == selectedSpecialization;
           return matchesHospital && matchesSpecialization;
         })
         .map((d) => d.name)
@@ -129,6 +134,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     filteredDoctorsDropdown.insert(0, "All Doctors");
     selectedDoctor = "All Doctors";
   }
+
   void _startAutoScroll() {
     _scrollTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       if (!_userInteracting) {
@@ -137,6 +143,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       }
     });
   }
+
   void _autoScroll(ScrollController controller) {
     if (!controller.hasClients) return;
     final max = controller.position.maxScrollExtent;
@@ -145,14 +152,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     if (next >= max) next = 0;
     controller.jumpTo(next);
   }
+
   void _onUserInteractionStart() {
     _userInteracting = true;
     _scrollTimer?.cancel();
   }
+
   void _onUserInteractionEnd() {
     _userInteracting = false;
     _startAutoScroll();
   }
+
   @override
   void dispose() {
     _scrollTimer?.cancel();
@@ -173,7 +183,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // ... (زي ما هو)
+        title: Text(
+          "Home Page",
+          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+        ),
+        automaticallyImplyLeading: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -212,7 +226,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       selectedHospital: selectedHospital,
                       selectedSpecialty: selectedSpecialization,
                       user: widget.user, // (5) 🔥 مررنا اليوزر
-                      jwt: widget.jwt,   // (6) 🔥 مررنا التوكن
+                      jwt: widget.jwt, // (6) 🔥 مررنا التوكن
                     )
                   : TopListsSection(
                       doctors: bestDoctors,

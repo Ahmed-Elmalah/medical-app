@@ -1,5 +1,5 @@
 // 📁 lib/models/user_model.dart
-// (النسخة الصحيحة اللي بتقرأ الداتا الـ "flat")
+// (النسخة الصحيحة "flat")
 
 class UserModel {
   final int id;
@@ -7,22 +7,23 @@ class UserModel {
   final String email;
   final String roleName;
 
-  UserModel({
+  const UserModel({
     required this.id,
     required this.username,
     required this.email,
     required this.roleName,
   });
 
-  // ✅ الدالة دي بتطابق الـ API بتاعك (من غير 'attributes')
+  // ✅ الدالة دي بتقرأ الـ JSON الـ "flat"
   factory UserModel.fromJson(Map<String, dynamic> json) {
     
+    final roleData = json['role'] as Map<String, dynamic>?;
+
     return UserModel(
       id: json['id'] ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
-      // (دي بتفضل زي ما هي لإن الـ role لسه object)
-      roleName: (json['role'] as Map<String, dynamic>?)?['name'] ?? 'Authenticated',
+      roleName: roleData?['name'] ?? 'Authenticated',
     );
   }
 }

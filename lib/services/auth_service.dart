@@ -20,9 +20,7 @@ class AuthService {
       // ✅ خطوة واحدة بس: تسجيل عادي
       final response = await http.post(
         Uri.parse(registerUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'username': name,
           'email': email,
@@ -37,7 +35,10 @@ class AuthService {
       } else {
         // فشل التسجيل (مثلاً: الإيميل موجود قبل كده)
         final error = json.decode(response.body)['error'];
-        return {'success': false, 'message': error['message'] ?? "Registration failed"};
+        return {
+          'success': false,
+          'message': error['message'] ?? "Registration failed",
+        };
       }
     } catch (e) {
       // فشل بسبب مشكلة في النت أو السيرفر
@@ -45,70 +46,56 @@ class AuthService {
     }
   }
 
-  // 📁 (داخل كلاس AuthService في lib/services/auth_service.dart)
-
- // 📁 (داخل كلاس AuthService في lib/services/auth_service.dart)
-
-  // ✅ دالة اللوجين الجديدة (المعدلة)
-  Future<Map<String, dynamic>> login({
+  // دالة اللوجين الموحدة
+  Future<Map<String, dynamic>> unifiedLogin({
     required String email,
     required String password,
   }) async {
     final String loginUrl = "$_baseUrl/auth/local";
-    final String meUrl = "$_baseUrl/users/me?populate=role"; // (1) 🔥 اللينك الجديد
+    final String meUrl = "$_baseUrl/users/me?populate=role";
 
     try {
-      // ------------------------------------
-      // (2) الخطوة الأولى: محاولة اللوجين
-      // ------------------------------------
+      // الخطوة 1: محاولة اللوجين
       final response = await http.post(
         Uri.parse(loginUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'identifier': email,
-          'password': password,
-        }),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'identifier': email, 'password': password}),
       );
 
       if (response.statusCode != 200) {
-        // فشل اللوجين
         final error = json.decode(response.body)['error'];
-        return {'success': false, 'message': error['message'] ?? "Login failed"};
+        return {
+          'success': false,
+          'message': error['message'] ?? "Login failed",
+        };
       }
 
       final loginData = json.decode(response.body);
-      final String jwt = loginData['jwt']; // (3) خدنا التوكن
+      final String jwt = loginData['jwt'];
 
-      // ------------------------------------
-      // (4) الخطوة الثانية: نجيب بيانات اليوزر الكاملة بالـ Role
-      // ------------------------------------
+      // الخطوة 2: نجيب بيانات اليوزر الكاملة
       final meResponse = await http.get(
         Uri.parse(meUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $jwt', // (5) استخدمنا التوكن
+          'Authorization': 'Bearer $jwt',
         },
       );
 
       if (meResponse.statusCode != 200) {
-        // نجح اللوجين، بس فشلنا نجيب بياناته (نادر)
-        return {'success': false, 'message': "Login successful, but failed to fetch user data."};
+        return {
+          'success': false,
+          'message': "Login successful, but failed to fetch user data.",
+        };
       }
 
-      // (6) هنا معانا بيانات اليوزر كاملة (بالـ Role)
       final userData = json.decode(meResponse.body);
-      
-      // (7) بنحول الـ JSON لموديل اليوزر
-      final user = UserModel.fromJson(userData); 
+      final user = UserModel.fromJson(userData);
+      final role = user.roleName.toLowerCase();
 
-      // (8) بنرجع بيانات اليوزر والـ Token
-      return {'success': true, 'user': user, 'jwt': jwt};
-
+      return {'success': true, 'user': user, 'role': role, 'jwt': jwt};
     } catch (e) {
       return {'success': false, 'message': 'Check your connection: $e'};
     }
   }
 }
-

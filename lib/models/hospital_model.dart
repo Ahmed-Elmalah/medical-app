@@ -1,4 +1,5 @@
 // 📁 lib/models/hospital_model.dart
+// (النسخة الصحيحة "flat" + تصليح الـ Dropdown)
 
 class HospitalModel {
   final int id;
@@ -13,7 +14,7 @@ class HospitalModel {
     required this.phone,
   });
 
-  // ✅ من JSON إلى موديل
+  // ✅ الدالة دي بتقرأ الـ JSON الـ "flat"
   factory HospitalModel.fromJson(Map<String, dynamic> json) {
     return HospitalModel(
       id: json['id'] ?? 0,
@@ -23,13 +24,14 @@ class HospitalModel {
     );
   }
 
-  // ✅ من موديل إلى JSON (عشان تشتغل مع toJson في DoctorModel)
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'address': address,
-      'phone': phone,
-    };
-  }
+  // (ده عشان يصلح إيرور الـ Dropdown في شاشة التعديل)
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HospitalModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id; 
+
+  @override
+  int get hashCode => id.hashCode;
 }

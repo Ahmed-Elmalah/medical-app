@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/role_selection_page.dart';
+import 'screens/unified_login_page.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: "Clinic App",
-      home: RoleSelectionPage(),
+      home: UnifiedLoginPage(),
     );
   }
 }

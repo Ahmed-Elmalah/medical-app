@@ -1,7 +1,8 @@
 // 📁 lib/models/doctor_model.dart
-// (النسخة اللي فيها workingDays)
+// (النسخة الصحيحة "flat")
 
-// (امسح أي 'import' لـ hospital أو specialization من هنا)
+import 'hospital_model.dart';
+import 'specialization_model.dart';
 
 class DoctorModel {
   final int id;
@@ -10,7 +11,7 @@ class DoctorModel {
   final HospitalModel? hospital;
   final SpecializationModel? specialization;
   final Map<String, dynamic>? workingHours;
-  final List<String>? workingDays; // (1) 🔥 تم تصليحها
+  final List<String>? workingDays;
   final String? imageUrl;
 
   const DoctorModel({
@@ -24,6 +25,7 @@ class DoctorModel {
     this.imageUrl,
   });
 
+  // ✅ الدالة دي بتقرأ الـ JSON الـ "flat"
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     String? finalImgUrl;
     if (json['img'] != null && json['img']['url'] != null) {
@@ -39,7 +41,6 @@ class DoctorModel {
           ? Map<String, dynamic>.from(json['workingHours'])
           : null,
       
-      // (2) 🔥 تم تصليحها من "workingKids"
       workingDays: json['workingDays'] != null
           ? List<String>.from(json['workingDays']) 
           : [],
@@ -57,41 +58,4 @@ class DoctorModel {
   }
 }
 
-// --- (الكلاسات دي خليها في نفس الملف) ---
-
-class HospitalModel {
-  final int id;
-  final String name;
-  final String address;
-  final String phone;
-
-  const HospitalModel({
-    required this.id,
-    required this.name,
-    required this.address,
-    required this.phone,
-  });
-
-  factory HospitalModel.fromJson(Map<String, dynamic> json) {
-    return HospitalModel(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      address: json['address'] ?? '',
-      phone: json['phone'] ?? '',
-    );
-  }
-}
-
-class SpecializationModel {
-  final int id;
-  final String name;
-
-  const SpecializationModel({required this.id, required this.name});
-
-  factory SpecializationModel.fromJson(Map<String, dynamic> json) {
-    return SpecializationModel(
-      id: json['id'] ?? 0, 
-      name: json['name'] ?? ''
-    );
-  }
-}
+// (امسح أي تعريف لـ HospitalModel أو SpecializationModel من هنا)

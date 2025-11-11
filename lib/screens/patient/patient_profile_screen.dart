@@ -1,8 +1,8 @@
 // 📁 lib/screens/patient/patient_profile_screen.dart
 
 import 'package:flutter/material.dart';
-import '../../models/user_model.dart'; // (1) استدعاء الموديل
-import '../role_selection_page.dart';
+import '../../models/user_model.dart';
+import '../unified_login_page.dart'; // (1) استدعاء الموديل
 
 class PatientProfileScreen extends StatelessWidget {
   // (2) إضافة متغير عشان نستقبل بيانات اليوزر
@@ -30,24 +30,27 @@ class PatientProfileScreen extends StatelessWidget {
               child: Icon(Icons.person, size: 60, color: Colors.white),
             ),
             const SizedBox(height: 20),
-            
+
             // (3) عرضنا الاسم الحقيقي
             Text(
-              user.username, 
+              user.username,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            
+
             // (4) عرضنا الايميل الحقيقي
             Text(
               user.email,
               style: const TextStyle(color: Colors.black54, fontSize: 16),
             ),
             const SizedBox(height: 40),
-            
+
             ElevatedButton.icon(
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                "Logout",
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 minimumSize: const Size(double.infinity, 50),
@@ -58,7 +61,7 @@ class PatientProfileScreen extends StatelessWidget {
               onPressed: () {
                 // (5) عملنا لوج أوت حقيقي بيرجع لصفحة اختيار الدور
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => RoleSelectionPage()),
+                  MaterialPageRoute(builder: (context) => UnifiedLoginPage()),
                   (Route<dynamic> route) => false,
                 );
               },

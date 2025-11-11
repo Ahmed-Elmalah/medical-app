@@ -1,10 +1,15 @@
 // 📁 lib/screens/patient/doctor_details_screen.dart
-// (النسخة اللي فيها if mounted)
+// (النسخة اللي بتقرأ من الجدول الجديد وبنفس الديزاين)
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // (هنحتاجها للوقت)
 import '../../models/doctor_model.dart';
 import '../../models/user_model.dart';
 import '../../services/booking_service.dart';
+
+// (1) 🔥 استدعاء الموديل والسيرفيس الجداد
+import '../../models/doctor_schedule_model.dart';
+import '../../services/doctor_schedule_service.dart';
 
 class DoctorDetailsScreen extends StatefulWidget {
   final DoctorModel doctor;
@@ -26,27 +31,53 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
     with SingleTickerProviderStateMixin {
       
   final BookingService _bookingService = BookingService();
-  String? selectedDay;
+  
+  // (2) 🔥 السيرفيس الجديد
+  final DoctorScheduleService _scheduleService = DoctorScheduleService();
+  late Future<List<DoctorScheduleModel>> _schedulesFuture;
+
+  // (3) 🔥 دي لسه محتاجينها عشان نعرف أنهي كارد مفتوح
+  String? selectedDay; 
   bool _isLoading = false;
 
-  void _handleBooking() async {
-    if (selectedDay == null) {
+  @override
+  void initState() {
+    super.initState();
+    // (4) 🔥 أول ما الشاشة تفتح، بنجيب المواعيد الجديدة
+    _loadSchedules();
+  }
+
+  void _loadSchedules() {
+    _schedulesFuture = _scheduleService.getSchedules(
+      widget.doctor.id,
+      widget.jwt, // (بنستخدم توكن المريض العادي عشان يقرأ)
+    );
+  }
+
+  // (5) 🔥 دالة الحجز اتعدلت عشان تاخد الميعاد كله
+// --- (1) 🔥 التعديل هنا ---
+  void _handleBooking(DoctorScheduleModel schedule) async {
+    if (_isLoading) return;
+    
+    if (schedule.hospital == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a day first"), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text("❌ Cannot book: Hospital data is missing for this schedule."),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
-    
-    if (_isLoading) return;
-    setState(() => _isLoading = true); 
 
-    final fromTime = widget.doctor.workingHours?['from'] ?? "09:00"; 
+    setState(() => _isLoading = true);
 
     final bool success = await _bookingService.createBooking(
       doctorId: widget.doctor.id,
       userId: widget.user.id,
-      selectedDay: selectedDay!,
-      fromTime: fromTime,
+      hospitalId: schedule.hospital!.id,
+      scheduleId: schedule.id, // (بعتنا ID الميعاد)
+      selectedDay: schedule.day,
+      fromTime: schedule.fromTime,
       token: widget.jwt,
     );
 
@@ -55,20 +86,16 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("✅ Booking successful! Day: $selectedDay at $fromTime"),
+          content: Text("✅ Booking successful! Day: ${schedule.day}"),
           backgroundColor: Colors.green,
         ),
       );
       
-      // --- (1) 🔥 التعديل هنا ---
-      // (لازم نتأكد إن الصفحة لسه موجودة)
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) { 
           Navigator.pop(context); 
         }
       });
-      // -------------------------
-
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -78,18 +105,22 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
       );
     }
   }
+  // (6) 🔥 دالة مساعدة لتنسيق الوقت
+  String _formatTime(String time) {
+    try {
+      final parsed = DateFormat("HH:mm:ss.SSS").parse(time);
+      return DateFormat("h:mm a").format(parsed);
+    } catch (e) {
+      return time; 
+    }
+  }
   
-  // (دالة الـ build زي ما هي بالظبط متغيرتش)
   @override
   Widget build(BuildContext context) {
     final doctor = widget.doctor;
     final imageUrl = doctor.imageUrl != null
         ? "http://localhost:1337${doctor.imageUrl}"
         : "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"; 
-
-    final workingDays = doctor.workingDays ?? [];
-    final from = doctor.workingHours?['from'] ?? "غير محدد";
-    final to = doctor.workingHours?['to'] ?? "غير محدد";
 
     return Scaffold(
       appBar: AppBar(
@@ -105,6 +136,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // (صورة الدكتور وبياناته زي ما هي بالظبط)
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.network(
@@ -150,10 +182,11 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 ],
               ),
               const SizedBox(height: 25),
+
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  "مواعيد العمل",
+                  "مواعيد العمل", // (الديزاين زي ما هو)
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -162,110 +195,200 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen>
                 ),
               ),
               const SizedBox(height: 10),
-              Column(
-                children: workingDays.map((day) {
-                  final isSelected = selectedDay == day;
 
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.blueAccent.withOpacity(0.1)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected
-                            ? Colors.blue
-                            : Colors.grey.shade300,
-                        width: 1.5,
+              // --- (7) 🔥 التعديل الكبير هنا ---
+              // (هنستخدم FutureBuilder عشان نجيب المواعيد الجديدة)
+              FutureBuilder<List<DoctorScheduleModel>>(
+                future: _schedulesFuture,
+                builder: (context, snapshot) {
+                  
+                  // (حالة التحميل)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  // (حالة لو مفيش مواعيد)
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Text(
+                          "This doctor has no available schedules at the moment.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedDay = isSelected ? null : day;
-                            });
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                day.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Icon(
-                                isSelected
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                color: Colors.blueAccent,
-                              ),
-                            ],
+                    );
+                  }
+                  
+                  // (حالة النجاح)
+                  final schedules = snapshot.data!;
+                  
+                  // (هنجيب الأيام المتاحة عشان نحافظ على الديزاين القديم)
+                  final uniqueDays = schedules.map((s) => s.day).toSet().toList();
+
+                  // (هنرجع للـ Column القديم عشان نحافظ على الديزاين)
+                  return Column(
+                    children: uniqueDays.map((day) {
+                      final isSelected = selectedDay == day;
+                      
+                      // (هنجيب المواعيد الخاصة باليوم ده بس)
+                      final schedulesForThisDay = schedules.where((s) => s.day == day).toList();
+
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.blueAccent.withOpacity(0.1)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.blue
+                                : Colors.grey.shade300,
+                            width: 1.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: isSelected
-                              ? Column(
-                                  children: [
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      " $from - $to",
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black,
-                                      ),
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedDay = isSelected ? null : day;
+                                });
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    day.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    const SizedBox(height: 15),
-                                    ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                             Colors.blue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 40, vertical: 12),
-                                      ),
-                                      onPressed: _handleBooking,
-                                      icon: const Icon(Icons.calendar_month , color: Colors.white,),
-                                      label: _isLoading
-                                          ? const CircularProgressIndicator(
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                              strokeWidth: 2,
-                                            )
-                                          : const Text(
-                                              "احجز الآن",
-                                              style: TextStyle(fontSize: 18 , color: Colors.white),
-                                            ),
-                                    ),
-                                  ],
-                                )
-                              : const SizedBox(),
+                                  ),
+                                  Icon(
+                                    isSelected
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            // (الكود اللي بيتفتح ويتقفل)
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: isSelected
+                                  ? Column(
+                                      children: [
+                                        const Divider(height: 20),
+                                        // (هنلف على المواعيد بتاعة اليوم ده)
+                                        ...schedulesForThisDay.map((schedule) {
+                                          final from = _formatTime(schedule.fromTime);
+                                          final to = _formatTime(schedule.toTime);
+                                          final hospital = schedule.hospital?.name ?? "Main Clinic";
+                                          
+                                          return _buildBookingSlot(schedule, hospital, from, to);
+                                        }).toList(),
+                                      ],
+                                    )
+                                  : const SizedBox(),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
+                },
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // (8) 🔥 ويدجت جديد بيعرض الميعاد الواحد وزرار الحجز بتاعه
+  Widget _buildBookingSlot(DoctorScheduleModel schedule, String hospital, String from, String to) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Color(0xffdfe0f4),
+        borderRadius: BorderRadius.circular(10),
+        // border: Border.all(color: Colors.grey.shade200)
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // (التفاصيل: المستشفى والوقت)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.local_hospital_outlined, color: Colors.black54, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      hospital,
+                      style: const TextStyle(color: Colors.black54, fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_outlined, color: Colors.black54, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      "$from - $to",
+                      style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // (زرار الحجز)
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            // (بنباصي الميعاد كله للدالة)
+            onPressed: () => _handleBooking(schedule), 
+            child: _isLoading // (بيعرض loading بس على الزرار ده)
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    "احجز",
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+          ),
+        ],
       ),
     );
   }

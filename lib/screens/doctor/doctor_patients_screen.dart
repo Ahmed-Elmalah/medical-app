@@ -1,24 +1,48 @@
+// 📁 lib/screens/doctor/doctor_patients_screen.dart
+// (النسخة اللي بتجيب الداتا من الـ API)
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // (عشان نظبط التاريخ)
 import '../../widgets/patient_card.dart';
+import '../../models/doctor_model.dart';
+import '../../models/booking_model.dart';
+import '../../services/booking_service.dart';
 
-class DoctorPatientsScreen extends StatelessWidget {
-  const DoctorPatientsScreen({Key? key}) : super(key: key);
+class DoctorPatientsScreen extends StatefulWidget {
+  final DoctorModel doctor;
+  final String token;
 
-  final List<Map<String, String>> _patients = const [
-    {
-      "name": "Mahmoud Ali",
-      "hospital": "Cairo Medical Center",
-      "date": "Tue, Nov 5 - 3:00 PM",
-      "image":
-          "https://imgs.search.brave.com/OH2XNLPZJSsxN-1hvbWvX-d54pbVDIxrGz14v-qmLaU/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvMTQw/Njk1NjE0Ni9waG90/by91bnJlY29nbml6/YWJsZS1wYXRpZW50/LWluLWhvc3BpdGFs/LWdvd24td2FpdHMt/Zm9yLXRlc3QtcmVz/dWx0cy5qcGc_cz02/MTJ4NjEyJnc9MCZr/PTIwJmM9aXZ1bnYz/eVdURktveWhIM2JT/NWZxeVVETGtLQmgw/ekFOdkRnbHpmRTgt/MD0",
-    },
-    {
-      "name": "Adham Mohamed",
-      "hospital": "El Salam Hospital",
-      "date": "Tue, Nov 5 - 5:00 PM",
-      "image": "images/2.jpg",
-    },
-  ];
+  const DoctorPatientsScreen({
+    Key? key,
+    required this.doctor,
+    required this.token,
+  }) : super(key: key);
+
+  @override
+  State<DoctorPatientsScreen> createState() => _DoctorPatientsScreenState();
+}
+
+class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
+  final BookingService _bookingService = BookingService();
+  late Future<List<BookingModel>> _bookingsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctorBookings();
+  }
+
+  void _loadDoctorBookings() {
+    _bookingsFuture = _bookingService.getBookingsForDoctor(
+      doctorId: widget.doctor.id,
+      token: widget.token,
+    );
+  }
+
+  // (دالة مساعدة لتنسيق التاريخ)
+  String _formatDateTime(DateTime dt) {
+    return DateFormat("E, MMM d  •  h:mm a").format(dt);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,33 +51,69 @@ class DoctorPatientsScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         title: const Align(
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             "My Patients",
             textAlign: TextAlign.left,
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Container(
-          width: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: _patients
-                .map(
-                  (p) => PatientCard(
-                    name: p["name"]!,
-                    hospital: p["hospital"]!,
-                    date: p["date"]!,
-                    imageUrl: p["image"]!,
-                    onTap: () {
-                      // تقدر تفتح صفحة تفاصيل المريض هنا
-                    },
-                  ),
-                )
-                .toList(),
-          ),
+      body: RefreshIndicator(
+        onRefresh: () async => setState(() => _loadDoctorBookings()),
+        child: FutureBuilder<List<BookingModel>>(
+          future: _bookingsFuture,
+          builder: (context, snapshot) {
+            
+            // --- 1. حالة الـ Loading ---
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            // --- 2. حالة الـ Error ---
+            if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            }
+
+            // --- 3. حالة النجاح ---
+            final bookings = snapshot.data ?? [];
+
+            // (لو مفيش حجوزات)
+            if (bookings.isEmpty) {
+              return const Center(
+                child: Text(
+                  "You have no patients yet 👨‍⚕️",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            }
+
+            // (لو فيه حجوزات، نعرض القايمة)
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: bookings.length,
+              itemBuilder: (context, index) {
+                final booking = bookings[index];
+
+                // (تجهيز الداتا للكارت)
+                final patientName = booking.user?.username ?? "Unknown Patient";
+                final hospitalName = booking.hospital?.name ?? "N/A";
+                final date = _formatDateTime(booking.date);
+                
+                // (صورة افتراضية)
+                final imageUrl = "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
+
+                return PatientCard(
+                  name: patientName,
+                  hospital: hospitalName,
+                  date: date,
+                  imageUrl: imageUrl,
+                  onTap: () {
+                    // (ممكن نبقى نعمل شاشة تفاصيل المريض هنا)
+                  },
+                );
+              },
+            );
+          },
         ),
       ),
     );
