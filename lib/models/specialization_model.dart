@@ -6,6 +6,7 @@ class SpecializationModel {
 
   const SpecializationModel({required this.id, required this.name});
 
+  // (بتقرأ الـ JSON الـ "flat" صح)
   factory SpecializationModel.fromJson(Map<String, dynamic> json) {
     return SpecializationModel(
       id: json['id'] ?? 0, 

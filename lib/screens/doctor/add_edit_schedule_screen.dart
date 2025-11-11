@@ -1,5 +1,5 @@
 // 📁 lib/screens/doctor/add_edit_schedule_screen.dart
-// (النسخة اللي بتستخدم documentId)
+// (النسخة الكاملة اللي بتشتغل مع "flat" models)
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -12,7 +12,7 @@ import '../../services/hospital_service.dart';
 class AddEditScheduleScreen extends StatefulWidget {
   final String token;
   final DoctorModel doctor;
-  final DoctorScheduleModel? scheduleToEdit;
+  final DoctorScheduleModel? scheduleToEdit; 
 
   const AddEditScheduleScreen({
     Key? key,
@@ -36,22 +36,16 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
   bool _isLoading = false;
 
   late Future<List<HospitalModel>> _hospitalsFuture;
-
+  
   final List<String> _days = [
-    "MONDAY",
-    "TUESDAY",
-    "WEDNESDAY",
-    "THURSDAY",
-    "FRIDAY",
-    "SATURDAY",
-    "SUNDAY"
+    "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"
   ];
 
   @override
   void initState() {
     super.initState();
     _hospitalsFuture = HospitalService.getHospitals();
-
+    
     if (widget.scheduleToEdit != null) {
       final schedule = widget.scheduleToEdit!;
       _selectedDay = schedule.day;
@@ -79,10 +73,8 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (_fromTime == null || _toTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please select start and end times"),
-            backgroundColor: Colors.orange),
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select start and end times"), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -101,11 +93,10 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
     if (widget.scheduleToEdit == null) {
       success = await _service.createSchedule(data, widget.token);
     } else {
-      // --- (1) 🔥 التعديل هنا (بنبعت documentId) ---
       success = await _service.updateSchedule(
-        widget.scheduleToEdit!.documentId, // (بدل .id)
-        data,
-        widget.token,
+        widget.scheduleToEdit!.documentId,
+        data, 
+        widget.token
       );
     }
 
@@ -113,12 +104,10 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pop(context, true);
+      Navigator.pop(context, true); 
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("❌ Failed to save schedule"),
-            backgroundColor: Colors.red),
+        const SnackBar(content: Text("❌ Failed to save schedule"), backgroundColor: Colors.red),
       );
     }
   }
@@ -138,13 +127,14 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
           }
           final hospitals = snapshot.data!;
 
+          // (الكود ده بيمنع الكراش بتاع الـ Dropdown)
           if (isEditing && _selectedHospital != null) {
             final hospitalIds = hospitals.map((h) => h.id).toList();
             if (!hospitalIds.contains(_selectedHospital!.id)) {
               hospitals.insert(0, _selectedHospital!);
             }
           }
-
+          
           return Form(
             key: _formKey,
             child: ListView(
@@ -153,9 +143,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedDay,
                   decoration: const InputDecoration(labelText: "Day of Week"),
-                  items: _days
-                      .map((day) => DropdownMenuItem(value: day, child: Text(day)))
-                      .toList(),
+                  items: _days.map((day) => DropdownMenuItem(value: day, child: Text(day))).toList(),
                   onChanged: (val) => setState(() => _selectedDay = val),
                   validator: (val) => val == null ? "Please select a day" : null,
                 ),
@@ -164,12 +152,11 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                   value: _selectedHospital,
                   decoration: const InputDecoration(labelText: "Hospital"),
                   items: hospitals
-                      .toSet()
+                      .toSet() // (بيمنع التكرار لو المستشفى اتضافت فوق)
                       .map((h) => DropdownMenuItem(value: h, child: Text(h.name)))
                       .toList(),
                   onChanged: (val) => setState(() => _selectedHospital = val),
-                  validator: (val) =>
-                      val == null ? "Please select a hospital" : null,
+                  validator: (val) => val == null ? "Please select a hospital" : null,
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -199,17 +186,13 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white))
+                      ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
                       : Text(
                           isEditing ? "Save Changes" : "Add Schedule",
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 18),
+                          style: const TextStyle(color: Colors.white, fontSize: 18),
                         ),
                 ),
               ],
@@ -220,8 +203,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
     );
   }
 
-  Widget _buildTimePickerField(BuildContext context, String label,
-      TimeOfDay? time, Function(TimeOfDay) onTimeChanged) {
+  Widget _buildTimePickerField(BuildContext context, String label, TimeOfDay? time, Function(TimeOfDay) onTimeChanged) {
     final text = time != null ? time.format(context) : "Select Time";
     return InkWell(
       onTap: () async {
