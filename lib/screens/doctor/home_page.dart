@@ -1,15 +1,14 @@
 // 📁 lib/screens/doctor/home_page.dart
-// (النسخة اللي بتمرر الداتا لـ DoctorPatientsScreen)
+// (النسخة اللي بتمرر الداتا للبروفايل)
 
 import 'package:flutter/material.dart';
 import 'package:project_2/models/doctor_model.dart';
 import 'package:project_2/models/user_model.dart';
-import 'doctor_profile_screen.dart';
+import 'doctor_profile_screen.dart'; // (1) 🔥 استدعاء الشاشة
 import 'doctor_schedule_screen.dart';
-import 'doctor_patients_screen.dart'; // (1) 🔥 استدعاء الشاشة
+import 'doctor_patients_screen.dart';
 
 class DoctorHomePage extends StatefulWidget {
-  // (2) 🔥 ضفنا المتغيرات دي (زي ما عملنا في الـ Schedule)
   final DoctorModel doctor;
   final UserModel user;
   final String jwt;
@@ -18,7 +17,7 @@ class DoctorHomePage extends StatefulWidget {
     Key? key,
     required this.doctor,
     required this.user,
-    required this.jwt, 
+    required this.jwt,
   }) : super(key: key);
 
   @override
@@ -33,18 +32,21 @@ class _DoctorHomePageState extends State<DoctorHomePage> {
   @override
   void initState() {
     super.initState();
-    // (3) 🔥 جهزنا الصفحات ومررنا الداتا
+    // (2) 🔥 جهزنا الصفحات ومررنا الداتا
     _pages = [
       DoctorScheduleScreen(
         doctor: widget.doctor,
         token: widget.jwt,
       ),
-      // (4) 🔥 مررنا الداتا لشاشة "المرضى"
       DoctorPatientsScreen(
         doctor: widget.doctor,
         token: widget.jwt,
       ),
-      const DoctorProfileScreen(),
+      // (3) 🔥 مررنا بيانات الدكتور واليوزر هنا
+      DoctorProfileScreen(
+        doctor: widget.doctor,
+        user: widget.user,
+      ),
     ];
   }
 

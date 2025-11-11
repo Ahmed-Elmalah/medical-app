@@ -58,4 +58,3 @@ class DoctorModel {
   }
 }
 
-// (امسح أي تعريف لـ HospitalModel أو SpecializationModel من هنا)

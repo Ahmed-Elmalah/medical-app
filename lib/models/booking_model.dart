@@ -1,14 +1,14 @@
 // 📁 lib/models/booking_model.dart
-// (النسخة الصحيحة "flat")
+// (النسخة اللي بتصلح التوقيت)
 
 import 'doctor_model.dart';
 import 'user_model.dart';
 import 'hospital_model.dart';
-import 'doctor_schedule_model.dart'; // (اتأكد إنك عامل import لده)
+import 'doctor_schedule_model.dart';
 
 class BookingModel {
   final int id;
-  final DateTime date;
+  final DateTime date; // (ده الـ DateTime الصح)
   final String documentId;
   final String state; 
   final DoctorModel? doctor;
@@ -27,15 +27,18 @@ class BookingModel {
     this.doctorSchedule,
   });
 
-  // ✅ الدالة دي بتقرأ الـ JSON الـ "flat"
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    // (ده بيقرأ "flat" زي ما اتفقنا)
+    
     return BookingModel(
       id: json['id'] ?? 0,
       documentId: json['documentId'] ?? '',
       
+      // --- (🔥 التعديل هنا) ---
       date: json['date'] != null
-          ? DateTime.parse(json['date'])
+          ? DateTime.parse(json['date']).toLocal() // (بنحول من UTC لتوقيتك المحلي)
           : DateTime.now(),
+      // -------------------------
           
       state: json['state'] ?? 'Confirmed',
 
